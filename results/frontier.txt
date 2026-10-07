@@ -1,0 +1,48 @@
+## W1. A learned wormhole on sparse recovery (40 equations, 200 unknowns)
+
+  meta step 0: held-out relative error 0.7897
+  meta step 100: held-out relative error 0.0040
+  meta step 200: held-out relative error 0.0179
+  meta step 300: held-out relative error 0.0040
+| nonzeros | method | median error vs true w | mean error | exact (error < 0.01) |
+|---|---|---|---|---|
+| 5 | plain GD | 0.893 | 0.891 | 0% |
+| 5 | u²−v² metric, tuned (a=1e-06, c=4) | 0.111 | 0.168 | 0% |
+| 5 | learned wormhole (trained at k=5) | 0.018 | 0.056 | 18% |
+| 5 | learned wormhole, 1600 steps | 0.013 | 0.023 | 31% |
+| 5 | L1 minimization (linear program) | 0.000 | 0.000 | 100% |
+| 8 | plain GD | 0.890 | 0.892 | 0% |
+| 8 | u²−v² metric, tuned (a=1e-06, c=4) | 0.436 | 0.446 | 0% |
+| 8 | learned wormhole (trained at k=5) | 0.261 | 0.330 | 0% |
+| 8 | learned wormhole, 1600 steps | 0.091 | 0.261 | 0% |
+| 8 | L1 minimization (linear program) | 0.000 | 0.112 | 85% |
+| 11 | plain GD | 0.899 | 0.897 | 0% |
+| 11 | u²−v² metric, tuned (a=1e-06, c=4) | 0.718 | 0.701 | 0% |
+| 11 | learned wormhole (trained at k=5) | 0.722 | 0.684 | 0% |
+| 11 | learned wormhole, 1600 steps | 0.718 | 0.676 | 0% |
+| 11 | L1 minimization (linear program) | 0.694 | 0.574 | 22% |
+
+Learned m(|w|): 1e-07: 0.000, 1e-06: 0.000, 1e-05: 0.000, 1e-04: 0.001, 1e-03: 0.002, 1e-02: 0.213, 1e-01: 3.968, 1e+00: 3.998, 1e+01: 3.999
+
+## W2. The wormholes in a network: N2's task under plain SGD, first layer only
+
+| first-layer step | test accuracy % | vs identity, same task | first-layer weight on the 5 real inputs |
+|---|---|---|---|
+| identity | 72.5 ± 5.0 | baseline | 34% |
+| u²−v² metric, 4|w|/s | 79.8 ± 4.7 | +7.3 (better on 10/10) | 72% |
+| learned wormhole, m(|w|/s) | 75.8 ± 4.7 | +3.4 (better on 10/10) | 43% |
+
+## W3. Grid walls: T' falls to eps at multiples of D (digits, Adam, 3 seeds)
+
+| grid step D | training | test acc % before rounding | test acc % rounded to the grid | mean distance to grid (0.25 = none) | grid levels used |
+|---|---|---|---|---|---|
+| 0.2 | plain, rounded after training | 98.9 | 98.5 (worst 98.1) | 0.252 | 7 |
+| 0.2 | STE (quantization-aware) | 98.7 | 98.7 (worst 98.6) | 0.000 | 10 |
+| 0.2 | walls, eps 0.03 | 98.1 | 97.2 (worst 96.1) | 0.167 | 3 |
+| 0.2 | walls, eps 0.3 | 98.2 | 97.5 (worst 96.7) | 0.189 | 4 |
+| 0.35 | plain, rounded after training | 98.9 | 88.3 (worst 79.7) | 0.239 | 5 |
+| 0.35 | STE (quantization-aware) | 7.5 | 7.5 (worst 7.5) | 0.000 | 4 |
+| 0.35 | walls, eps 0.03 | 98.2 | 93.1 (worst 91.9) | 0.177 | 3 |
+| 0.35 | walls, eps 0.3 | 98.1 | 92.7 (worst 88.9) | 0.186 | 3 |
+
+EXIT 0

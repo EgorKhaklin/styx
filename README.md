@@ -77,6 +77,94 @@ preference for few of them.
 
 ![sparse](figures/sparse_relevance.png)
 
+## Learned wormholes
+
+charon showed that a transform is a metric. Gradient descent on `θ` moves the effective weight by
+`−lr · m(W) · dL/dW`, with `m(W) = T'(T⁻¹(W))²`. So instead of guessing `T`, styx lets gradient
+descent learn `m`. [styx/wormholes.py](styx/wormholes.py) makes `m` a small network of `log|W|`
+and fits it by differentiating through whole training runs. The only signal is the error on
+held-out equations after 400 steps. The learner never sees the true weights. Every number
+below comes from `python -m styx.frontier` (output in [results/frontier.txt](results/frontier.txt)
+and [results/frontier_w4.txt](results/frontier_w4.txt)).
+
+**W1. It learns a gate, and the gate beats the hand-made transforms.** On charon's sparse problem
+(40 equations, 200 unknowns), 100 new test problems, the same 400-step budget, and baselines
+tuned on 24 other problems:
+
+| nonzeros | method | median error vs true w | exact recoveries |
+|---|---|---|---|
+| 5 | plain gradient descent | 0.893 | 0% |
+| 5 | `u²−v²` metric, tuned | 0.111 | 0% |
+| 5 | **learned wormhole** | **0.018** | 18% |
+| 5 | L1 minimization (linear program) | 0.000 | 100% |
+| 8 | `u²−v²` metric, tuned | 0.436 | 0% |
+| 8 | learned wormhole | 0.261 | 0% |
+| 8 | L1 minimization | 0.000 | 85% |
+
+![learned metric](figures/learned_metric.png)
+
+The learned `m` has a small floor, then rises like `W²` (twice the slope of `u²−v²`), then
+saturates at the step cap. A weight stays nearly frozen until the gradient has pushed it past
+about 0.01, then it moves at full speed. A second training with a different network, where `m`
+could also depend on training time, found the same shape, gating a little tighter as training
+went on. It was no better (median 0.018 on the same test problems).
+
+**W4. The gate as a formula beats the network that found it.** Fitting the curve's shape gives
+
+```
+m(W) = f·|W|^q + 4·W² / (W² + τ²)
+```
+
+Without the floor term, `1/m = (1 + τ²/W²)/4`. The implied mirror potential is
+`W²/8 − (τ²/4)·log|W|`: a log barrier, the shape of the log-sum sparsity penalty. The floor
+lets weights leave zero. Three parameters, picked on 24 other problems:
+
+| nonzeros | method | median error | exact recoveries |
+|---|---|---|---|
+| 5 | log wormhole, 400 steps | 0.0018 | 65% |
+| 5 | log wormhole, 3000 steps | 0.0000 | 99% |
+| 5 | L1 minimization | 0.0000 | 100% |
+| 8 | log wormhole, 3000 steps | 0.0002 | 69% |
+| 8 | L1 minimization | 0.0000 | 85% |
+| 11 | log wormhole, 3000 steps | 0.692 | 5% |
+| 11 | L1 minimization | 0.694 | 22% |
+
+Plain gradient descent with this one elementwise metric matches L1 minimization on easy
+problems. As the problems get harder, it falls behind (69% against 85% exact, then 5%
+against 22%). Beating L1 past its failure point, as reweighted-L1 and log-sum methods are known
+to, was the hope. It did not happen here, and it is the open problem. Retraining the learned
+`m` at 12 nonzeros did not converge in 250 meta-steps.
+
+**W2. In a network.** N2's task (200 examples, 5 of 100 inputs matter, 10 tasks), plain SGD,
+the metric applied to the first layer only, with learning rate, metric scale and init picked
+on validation:
+
+| first-layer step | test accuracy % | vs plain SGD, same task | first-layer weight on the 5 real inputs |
+|---|---|---|---|
+| plain SGD | 72.5 ± 5.0 | baseline | 34% |
+| `u²−v²` metric, `4|W|/s` | **79.8 ± 4.7** | +7.3 (better on 10/10) | 72% |
+| learned wormhole, `m(|W|/s)` | 75.8 ± 4.7 | +3.4 (better on 10/10) | 43% |
+
+Both help on every task, and under plain SGD the gain is larger than N2's under Adam. The gate
+learned on linear problems transfers only partly: the simple `u²−v²` metric wins in the network.
+
+**W3. Grid walls (mixed).** `T(t) = D·(t − (1−ε)·sin(2πt)/(2π))` makes `T'` fall to `ε·D` at
+every multiple of `D`, so weights slow down at the grid and stay inside their starting cell.
+On digits (Adam, 3 seeds), rounded to a coarse grid after training:
+
+| grid step | plain, then rounded | STE (quantization-aware) | walls, ε = 0.03 |
+|---|---|---|---|
+| 0.2 | 98.5% | **98.7%** | 97.2% |
+| 0.35 | 88.3% (worst seed 79.7%) | 7.5% (collapsed) | **93.1%** (worst 91.9%) |
+
+At the coarse grid the walls hold up where plain rounding loses 10 points. The simple STE
+collapses there, because every starting weight rounds to zero. A properly tuned
+quantization-aware method would likely do better than both, so this is not a quantization
+result.
+
+**Also tried, did not work.** Wormhole jumps (charon E10). Nested `tanh`/`sinh` around a power
+(charon E9).
+
 ## What is and isn't new here
 
 The N2 effect is a known one. Powerpropagation (Schwarz et al., NeurIPS 2021) uses the
@@ -84,12 +172,22 @@ The N2 effect is a known one. Powerpropagation (Schwarz et al., NeurIPS 2021) us
 established theory for linear models. styx reproduces it in a small, fully tested setting
 and compares the family side by side. It does not claim a new method.
 
+The learned wormholes are closer to new. Learned mirror maps exist (Tan et al., "Data-Driven
+Mirror Descent with Input-Convex Neural Networks", 2023), but they are learned for speed on
+inverse problems. A literature search found no work that meta-learns an elementwise
+reparameterization, that is, an implicit bias, for the quality of the answer, or that
+distills it to a log-barrier metric. The comparison that matters is L1 and reweighted-L1
+(Candès, Wakin and Boyd, 2008), and on it the result is a tie on easy problems and a loss on
+hard ones.
+
 ## Run it
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -e '.[test]'
-.venv/bin/python -m pytest -q              # 12 tests
+.venv/bin/python -m pytest -q              # 21 tests
 .venv/bin/python -m styx.experiments       # ~3 min; writes figures/ and results/
+.venv/bin/python -m styx.frontier w1 w2 w3 > results/frontier.txt     # ~30 min
+.venv/bin/python -m styx.frontier w4 > results/frontier_w4.txt        # ~10 min
 ```
 
 The tests check that registration keeps the initial network exactly, that autograd's gradient
