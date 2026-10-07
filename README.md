@@ -23,6 +23,17 @@ Each transform has an exact inverse, so the transformed network **starts as the 
 | c·tanh(w/c) | `0.2·tanh(w/0.2)` | every weight bounded by 0.2 |
 | u²−v² | `u² − v²`, two tensors | the squared factorization charon's E6 used |
 
+## At a glance
+
+- With plenty of data, no weight transform helps. With scarce data and noisy inputs, the
+  power transforms win on every task tried (N1, N2).
+- Gradient descent can learn its own transform. The learned rule is a gate that keeps a
+  weight still until the gradient has pushed it past a threshold. It beats the best
+  hand-tuned transform on sparse recovery (W1). As a three-parameter formula, it ties L1
+  minimization on easy problems (W4).
+- In a small network under plain SGD, the `u²−v²` metric adds 7.3 points of test accuracy
+  on 10 of 10 tasks (W2).
+
 ## Results
 
 Every number comes from `python -m styx.experiments` (about 3 minutes on a laptop CPU; full
