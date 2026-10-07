@@ -170,7 +170,7 @@ result.
 
 Two side runs (not in the script, 3 seeds each). At an even coarser grid (`D = 0.5`), fixed walls
 keep 49.9% against 23.0% for plain rounding. Raising the walls gradually instead, from `ε = 1`
-to `0.03` over training (Nehemiah rebuilding the walls), is much worse: 69.7% at `D = 0.35`
+to `0.03` over training, is much worse: 69.7% at `D = 0.35`
 and 11.9% at `D = 0.5`. The walls only work as a foundation. Weights that wander before the
 walls go up are trapped mid-cell.
 
