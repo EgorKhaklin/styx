@@ -5,11 +5,14 @@
 | 5 | log wormhole, 400 steps | f=0.001 q=0.5 tau=0.003 | 0.0018 | 0.058 | 65% |
 | 5 | log wormhole, 3000 steps | f=0.0001 q=0.5 tau=0.001 | 0.0000 | 0.001 | 99% |
 | 5 | L1 minimization (linear program) |  | 0.0000 | 0.000 | 100% |
+| 5 | reweighted L1 (5 reweights, eps 0.1) |  | 0.0000 | 0.000 | 100% |
 | 8 | log wormhole, 400 steps | f=0.01 q=0.5 tau=0.03 | 0.2937 | 0.343 | 3% |
 | 8 | log wormhole, 3000 steps | f=0.0001 q=0.5 tau=0.001 | 0.0002 | 0.176 | 69% |
 | 8 | L1 minimization (linear program) |  | 0.0000 | 0.112 | 85% |
+| 8 | reweighted L1 (5 reweights, eps 0.1) |  | 0.0000 | 0.110 | 85% |
 | 11 | log wormhole, 400 steps | f=0.001 q=0.5 tau=0.001 | 0.7383 | 0.709 | 0% |
 | 11 | log wormhole, 3000 steps | f=0.001 q=0.5 tau=0.01 | 0.6924 | 0.622 | 5% |
 | 11 | L1 minimization (linear program) |  | 0.6936 | 0.574 | 22% |
+| 11 | reweighted L1 (5 reweights, eps 0.1) |  | 0.6804 | 0.573 | 22% |
 
 EXIT 0

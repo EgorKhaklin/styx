@@ -128,12 +128,16 @@ lets weights leave zero. Three parameters, picked on 24 other problems:
 | 8 | L1 minimization | 0.0000 | 85% |
 | 11 | log wormhole, 3000 steps | 0.692 | 5% |
 | 11 | L1 minimization | 0.694 | 22% |
+| 11 | reweighted L1 | 0.680 | 22% |
 
 Plain gradient descent with this one elementwise metric matches L1 minimization on easy
 problems. As the problems get harder, it falls behind (69% against 85% exact, then 5%
-against 22%). Beating L1 past its failure point, as reweighted-L1 and log-sum methods are known
-to, was the hope. It did not happen here, and it is the open problem. Retraining the learned
-`m` at 12 nonzeros did not converge in 250 meta-steps.
+against 22%). Beating L1 past its failure point was the hope, and it did not happen. Neither
+did the known route to it: on the same test problems, reweighted L1 (Candès, Wakin and Boyd,
+5 reweights) recovers exactly what L1 does (85% at 8 nonzeros, 22% at 11). At this size L1
+looks close to the ceiling. In side runs (not in the script), shrinking `τ` during training made
+the log wormhole worse (45% exact at 8 nonzeros), and retraining the learned `m` at 12 nonzeros did not converge in 250
+meta-steps.
 
 **W2. In a network.** N2's task (200 examples, 5 of 100 inputs matter, 10 tasks), plain SGD,
 the metric applied to the first layer only, with learning rate, metric scale and init picked
@@ -146,7 +150,9 @@ on validation:
 | learned wormhole, `m(|W|/s)` | 75.8 ± 4.7 | +3.4 (better on 10/10) | 43% |
 
 Both help on every task, and under plain SGD the gain is larger than N2's under Adam. The gate
-learned on linear problems transfers only partly: the simple `u²−v²` metric wins in the network.
+learned on linear problems transfers only partly: the simple `u²−v²` metric wins in the network. W4's log
+wormhole, tried in a side run with the same tuning, ties it: 79.3 ± 5.4, better than plain SGD on
+10/10 tasks and better than `u²−v²` on 4/10.
 
 **W3. Grid walls (mixed).** `T(t) = D·(t − (1−ε)·sin(2πt)/(2π))` makes `T'` fall to `ε·D` at
 every multiple of `D`, so weights slow down at the grid and stay inside their starting cell.

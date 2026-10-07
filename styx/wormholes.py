@@ -106,6 +106,19 @@ def basis_pursuit(X, y):
     return r.x[:d] - r.x[d:]
 
 
+def reweighted_l1(X, y, iters=5, eps=0.1):
+    """Candes, Wakin and Boyd's reweighted L1: repeat basis pursuit with weights 1/(|w| + eps)."""
+    from scipy.optimize import linprog
+    d = X.shape[1]
+    wts = np.ones(d)
+    for _ in range(iters):
+        r = linprog(np.concatenate([wts, wts]), A_eq=np.hstack([X, -X]), b_eq=y,
+                    bounds=(0, None), method="highs")
+        w = r.x[:d] - r.x[d:]
+        wts = 1 / (np.abs(w) + eps)
+    return w
+
+
 class Walls(nn.Module):
     """T(t) = D * (t - (1 - eps) sin(2 pi t) / (2 pi)): T'(t) = D (1 - (1 - eps) cos 2 pi t),
     which falls to eps * D at every integer t, so weights slow down at multiples of D."""

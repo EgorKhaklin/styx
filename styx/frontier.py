@@ -18,7 +18,8 @@ from torch.nn.utils import parametrize  # noqa: E402
 from .experiments import COLORS, FIG, INK, INK2, RES, relevance, sparse_task, table  # noqa: E402
 from .train import digits, mlp  # noqa: E402
 from .wormholes import (RoundSTE, Walls, basis_pursuit, descend,  # noqa: E402
-                        hadamard_metric, log_wormhole, meta_train, rel_err, sparse_tasks)
+                        hadamard_metric, log_wormhole, meta_train, rel_err,
+                        reweighted_l1, sparse_tasks)
 
 
 def w1_learned():
@@ -188,10 +189,12 @@ def w4_log_wormhole():
                 e = rel_err(descend(X, y, log_wormhole(*p), steps), wt)
                 rows.append([k, f"log wormhole, {steps} steps", f"f={p[0]:g} q={p[1]:g} tau={p[2]:g}",
                              f"{e.median():.4f}", f"{e.mean():.3f}", f"{100 * (e < 1e-2).float().mean():.0f}%"])
-        e = rel_err(torch.tensor(np.stack(
-            [basis_pursuit(X[i].numpy(), y[i].numpy()) for i in range(len(X))])), wt)
-        rows.append([k, "L1 minimization (linear program)", "", f"{e.median():.4f}", f"{e.mean():.3f}",
-                     f"{100 * (e < 1e-2).float().mean():.0f}%"])
+        for name, solve in [("L1 minimization (linear program)", basis_pursuit),
+                            ("reweighted L1 (5 reweights, eps 0.1)", reweighted_l1)]:
+            e = rel_err(torch.tensor(np.stack(
+                [solve(X[i].numpy(), y[i].numpy()) for i in range(len(X))])), wt)
+            rows.append([k, name, "", f"{e.median():.4f}", f"{e.mean():.3f}",
+                         f"{100 * (e < 1e-2).float().mean():.0f}%"])
     return table(["nonzeros", "method", "parameters (picked on 24 other problems)",
                   "median error vs true w", "mean error", "exact (error < 0.01)"], rows)
 
