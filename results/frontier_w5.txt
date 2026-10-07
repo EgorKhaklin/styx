@@ -1,0 +1,14 @@
+## W5. Kosmos: round trained weights onto the E8 lattice (digits, 3 seeds)
+
+| step | rounded onto | test accuracy % | weight mean squared error |
+|---|---|---|---|
+| 0.15 | per-entry grid (Z⁸) | 98.4 (worst 98.3) | 1.86e-03 |
+| 0.15 | E8 lattice, blocks of 8 | 98.1 (worst 97.8) | 1.61e-03 |
+| 0.25 | per-entry grid (Z⁸) | 97.9 (worst 97.5) | 5.39e-03 |
+| 0.25 | E8 lattice, blocks of 8 | 98.0 (worst 97.8) | 4.48e-03 |
+| 0.35 | per-entry grid (Z⁸) | 88.3 (worst 79.7) | 9.90e-03 |
+| 0.35 | E8 lattice, blocks of 8 | 94.6 (worst 92.8) | 8.55e-03 |
+| 0.5 | per-entry grid (Z⁸) | 23.0 (worst 18.1) | 1.44e-02 |
+| 0.5 | E8 lattice, blocks of 8 | 52.0 (worst 35.0) | 1.43e-02 |
+
+EXIT 0

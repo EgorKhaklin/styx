@@ -1,4 +1,4 @@
-"""Learned wormholes (W1, W2) and grid walls (W3).
+"""Learned wormholes (W1, W2, W4), grid walls (W3) and E8 rounding (W5).
 
     python -m styx.frontier       # about 30 minutes on a laptop CPU; writes results/frontier.txt
 """
@@ -18,8 +18,8 @@ from torch.nn.utils import parametrize  # noqa: E402
 from .experiments import COLORS, FIG, INK, INK2, RES, relevance, sparse_task, table  # noqa: E402
 from .train import digits, mlp  # noqa: E402
 from .wormholes import (RoundSTE, Walls, basis_pursuit, descend,  # noqa: E402
-                        hadamard_metric, log_wormhole, meta_train, rel_err,
-                        reweighted_l1, sparse_tasks)
+                        hadamard_metric, lattice_quantize, log_wormhole, meta_train,
+                        rel_err, reweighted_l1, sparse_tasks)
 
 
 def w1_learned():
@@ -199,11 +199,53 @@ def w4_log_wormhole():
                   "median error vs true w", "mean error", "exact (error < 0.01)"], rows)
 
 
-SECTIONS = ("w1", "w2", "w3", "w4")
+def w5_kosmos():
+    print("## W5. Kosmos: round trained weights onto the E8 lattice (digits, 3 seeds)\n")
+    Xtr, ytr, Xte, yte = digits()
+
+    def train(seed):
+        torch.manual_seed(seed)
+        model = nn.Sequential(nn.Linear(64, 128), nn.ReLU(), nn.Linear(128, 128), nn.ReLU(),
+                              nn.Linear(128, 10))
+        opt = torch.optim.Adam(model.parameters(), lr=1e-2)
+        g = torch.Generator().manual_seed(seed)
+        for _ in range(60):
+            perm = torch.randperm(len(Xtr), generator=g)
+            for i in range(0, len(perm), 64):
+                j = perm[i:i + 64]
+                opt.zero_grad()
+                nn.functional.cross_entropy(model(Xtr[j]), ytr[j]).backward()
+                opt.step()
+        return model
+
+    models = [train(s) for s in range(3)]
+    rows = []
+    for step in (0.15, 0.25, 0.35, 0.5):
+        for lattice, label in (("Z8", "per-entry grid (Z⁸)"), ("E8", "E8 lattice, blocks of 8")):
+            accs, mses = [], []
+            for m in models:
+                sd = {k: v.clone() for k, v in m.state_dict().items()}
+                errs = []
+                for name in [n for n in sd if n.endswith("weight")]:
+                    Wq = lattice_quantize(sd[name], step, lattice)
+                    errs.append(float(((Wq - sd[name]) ** 2).mean()))
+                    sd[name] = Wq
+                q = nn.Sequential(nn.Linear(64, 128), nn.ReLU(), nn.Linear(128, 128), nn.ReLU(),
+                                  nn.Linear(128, 10))
+                q.load_state_dict(sd)
+                with torch.no_grad():
+                    accs.append(float((q(Xte).argmax(1) == yte).float().mean()))
+                mses.append(np.mean(errs))
+            rows.append([f"{step:g}", label, f"{100 * np.mean(accs):.1f} (worst {100 * min(accs):.1f})",
+                         f"{np.mean(mses):.2e}"])
+    return table(["step", "rounded onto", "test accuracy %", "weight mean squared error"], rows)
+
+
+SECTIONS = ("w1", "w2", "w3", "w4", "w5")
 
 
 def main(argv=None):
-    """python -m styx.frontier [w1 w2 w3 w4]; w2 needs w1's metric, so it runs w1 first."""
+    """python -m styx.frontier [w1 w2 w3 w4 w5]; w2 needs w1's metric, so it runs w1 first."""
     import sys
     want = set(argv if argv is not None else sys.argv[1:]) or set(SECTIONS)
     FIG.mkdir(exist_ok=True)
@@ -218,6 +260,8 @@ def main(argv=None):
         out["w3"] = w3_walls()
     if "w4" in want:
         out["w4"] = w4_log_wormhole()
+    if "w5" in want:
+        out["w5"] = w5_kosmos()
     path.write_text(json.dumps(out, indent=2) + "\n")
 
 

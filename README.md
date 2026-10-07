@@ -33,6 +33,12 @@ Each transform has an exact inverse, so the transformed network **starts as the 
   minimization on easy problems (W4).
 - In a small network under plain SGD, the `u²−v²` metric adds 7.3 points of test accuracy
   on 10 of 10 tasks (W2).
+- Rounding trained weights onto the E8 lattice keeps far more accuracy than a plain grid at
+  coarse steps, with no retraining: 94.6% against 88.3%, and 52.0% against 23.0% (W5).
+- The sparse-recovery method that gets past L1 is in
+  [charon](https://github.com/EgorKhaklin/charon) (Pandora, E17).
+
+![wormholes vs L1](figures/wormholes_vs_l1.png)
 
 ## Results
 
@@ -154,6 +160,8 @@ meta-steps.
 the metric applied to the first layer only, with learning rate, metric scale and init picked
 on validation:
 
+![network](figures/network.png)
+
 | first-layer step | test accuracy % | vs plain SGD, same task | first-layer weight on the 5 real inputs |
 |---|---|---|---|
 | plain SGD | 72.5 ± 5.0 | baseline | 34% |
@@ -185,6 +193,27 @@ to `0.03` over training, is much worse: 69.7% at `D = 0.35`
 and 11.9% at `D = 0.5`. The walls only work as a foundation. Weights that wander before the
 walls go up are trapped mid-cell.
 
+**W5. Kosmos: rounding onto the E8 lattice.** The E8 lattice is the densest packing of spheres
+in 8 dimensions, with 240 nearest neighbours of each point. Group a trained network's weights
+in blocks of 8 and round each block to the nearest point of `step · E8` instead of rounding
+each weight to `step · ℤ`. The two grids have the same number of points per volume, so this is
+a fair comparison at equal density. Digits, 3 seeds, no retraining
+([results/frontier_w5.txt](results/frontier_w5.txt)):
+
+| step | per-entry grid | E8 lattice |
+|---|---|---|
+| 0.15 | **98.4%** | 98.1% |
+| 0.25 | 97.9% | **98.0%** |
+| 0.35 | 88.3% (worst seed 79.7%) | **94.6%** (worst 92.8%) |
+| 0.5 | 23.0% | **52.0%** |
+
+![Kosmos](figures/kosmos.png)
+
+At fine steps the two tie. At coarse steps E8 keeps much more, and it beats W3's walls, which
+need retraining (93.1% and 49.9%), without any. E8 codebooks are already used to quantize
+large language models (QuIP#, Tseng et al., 2024), so this is a confirmation in a small
+setting, not a new method.
+
 **Also tried, did not work.** Wormhole jumps (charon E10). Nested `tanh`/`sinh` around a power
 (charon E9).
 
@@ -207,10 +236,12 @@ hard ones.
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -e '.[test]'
-.venv/bin/python -m pytest -q              # 21 tests
+.venv/bin/python -m pytest -q              # 23 tests
 .venv/bin/python -m styx.experiments       # ~3 min; writes figures/ and results/
 .venv/bin/python -m styx.frontier w1 w2 w3 > results/frontier.txt     # ~30 min
 .venv/bin/python -m styx.frontier w4 > results/frontier_w4.txt        # ~10 min
+.venv/bin/python -m styx.frontier w5 > results/frontier_w5.txt        # ~1 min
+.venv/bin/python -m styx.figures                                      # redraws figures from results/
 ```
 
 The tests check that registration keeps the initial network exactly, that autograd's gradient
@@ -220,9 +251,10 @@ torch, exact to float64).
 
 ## Limits
 
-Small networks, small datasets, CPU only. N1 uses 3 seeds and N2 uses 10 synthetic tasks. The
-N2 margins are consistent across tasks but come from one synthetic task family. Nothing here is
-a claim about large models or real data.
+Small networks, small datasets, CPU only. N1, W3 and W5 use 3 seeds on sklearn's digits. N2 and
+W2 use 10 synthetic tasks from one task family. W1 and W4 use random Gaussian sparse-recovery
+problems. The margins are consistent across tasks and seeds, but nothing here is a claim about
+large models or real data.
 
 ## License
 

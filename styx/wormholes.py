@@ -151,3 +151,34 @@ class RoundSTE(nn.Module):
 
     def right_inverse(self, W):
         return W
+
+
+def round_d8(x):
+    """Nearest point of D8 (integer vectors with an even sum), rows of x in R^8."""
+    f = torch.round(x)
+    odd = (f.sum(-1) % 2 != 0)
+    if odd.any():
+        i = (x - f).abs().argmax(-1)
+        rows = torch.nonzero(odd).squeeze(-1)
+        xi, fi = x[rows, i[rows]], f[rows, i[rows]]
+        f[rows, i[rows]] = fi + torch.where(xi > fi, 1.0, -1.0)
+    return f
+
+
+def round_e8(x):
+    """Nearest point of the E8 lattice, D8 union (D8 + 1/2): the densest packing in 8
+    dimensions, with 240 nearest neighbours of the origin. Covolume 1, like Z^8."""
+    a = round_d8(x.clone())
+    b = round_d8(x - 0.5) + 0.5
+    closer = ((x - a) ** 2).sum(-1, keepdim=True) <= ((x - b) ** 2).sum(-1, keepdim=True)
+    return torch.where(closer, a, b)
+
+
+def lattice_quantize(W, step, lattice="E8"):
+    """Round W in blocks of 8 entries to step * lattice. Z8 is the plain per-entry grid; both
+    lattices have one point per unit volume, so the comparison is at equal density."""
+    flat = W.flatten()
+    pad = (-len(flat)) % 8
+    v = torch.cat([flat, flat.new_zeros(pad)]).view(-1, 8) / step
+    q = torch.round(v) if lattice == "Z8" else round_e8(v)
+    return (q * step).flatten()[:len(flat)].view_as(W)

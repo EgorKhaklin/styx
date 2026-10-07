@@ -66,3 +66,24 @@ def test_log_wormhole_is_a_log_barrier_geometry():
     w = torch.tensor([-0.5, -0.01, 0.003, 0.2, 2.0])
     tau = 0.01
     assert 1 / log_wormhole(0.0, 0.5, tau)(w) == pytest.approx((1 + tau**2 / w**2) / 4, rel=1e-12)
+
+
+def test_e8_rounding_is_on_the_lattice_and_nearest():
+    from styx.wormholes import round_e8
+    g = torch.Generator().manual_seed(0)
+    x = torch.randn(500, 8, generator=g) * 2
+    q = round_e8(x)
+    frac = q - torch.floor(q)
+    integer = (frac == 0).all(-1) & (q.sum(-1) % 2 == 0)
+    half = (frac == 0.5).all(-1) & ((q - 0.5).sum(-1) % 2 == 0)
+    assert (integer | half).all()
+    # never farther than the nearest point of the integer grid restricted to D8 or D8 + 1/2
+    assert ((x - q) ** 2).sum(-1).max() <= 1.0 + 1e-9  # E8 covering radius squared is 1
+
+
+def test_lattice_quantize_has_equal_density_grids():
+    from styx.wormholes import lattice_quantize
+    W = torch.randn(13, 7)
+    for lat in ("Z8", "E8"):
+        assert lattice_quantize(W, 0.3, lat).shape == W.shape
+    assert torch.allclose(lattice_quantize(W, 0.3, "Z8"), torch.round(W / 0.3) * 0.3)
