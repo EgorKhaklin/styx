@@ -154,7 +154,7 @@ learned on linear problems transfers only partly: the simple `u²−v²` metric 
 wormhole, tried in a side run with the same tuning, ties it: 79.3 ± 5.4, better than plain SGD on
 10/10 tasks and better than `u²−v²` on 4/10.
 
-**W3. Grid walls (mixed).** `T(t) = D·(t − (1−ε)·sin(2πt)/(2π))` makes `T'` fall to `ε·D` at
+**W3. Tartarus: grid walls (mixed).** In the myth, Tartarus is a prison walled in bronze. `T(t) = D·(t − (1−ε)·sin(2πt)/(2π))` makes `T'` fall to `ε·D` at
 every multiple of `D`, so weights slow down at the grid and stay inside their starting cell.
 On digits (Adam, 3 seeds), rounded to a coarse grid after training:
 
